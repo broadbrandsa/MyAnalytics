@@ -9,7 +9,14 @@ export default async function AdminLayout({
 }) {
   const user = await requireAdmin();
   return (
-    <AppShell user={user} homeHref="/admin">
+    <AppShell
+      user={user}
+      homeHref="/admin"
+      nav={[
+        { href: "/admin", label: "Overview" },
+        { href: "/admin/clients", label: "Clients" },
+      ]}
+    >
       {children}
     </AppShell>
   );

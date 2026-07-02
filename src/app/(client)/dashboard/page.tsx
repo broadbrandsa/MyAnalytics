@@ -1,53 +1,36 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ClientDashboard } from "@/components/dashboard/client-dashboard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ClientRow } from "@/lib/data/clients";
 
 /**
- * Client dashboard. Phase 4 builds the real widgets (KPI cards, time series,
- * tables) reading from metrics_* tables. For now it renders an empty branded
- * shell scoped to the viewer's client(s) via RLS.
+ * Viewer dashboard. Resolves the viewer's client via membership (RLS scopes
+ * the read to their own client rows). If a viewer belongs to more than one
+ * client, the first is shown — a switcher can come later.
  */
 export default async function DashboardPage() {
   const supabase = await createClient();
-  // RLS: a client_viewer only sees their own client rows.
-  const { data: clients } = await supabase
+  const { data } = await supabase
     .from("clients")
-    .select("id, name, brand_color")
+    .select("*")
     .eq("is_archived", false)
     .order("name");
 
-  const client = clients?.[0];
+  const client = (data as ClientRow[] | null)?.[0];
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {client ? client.name : "Dashboard"}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Your marketing performance across Meta, Google Ads, GA4, and Search
-          Console.
-        </p>
-      </div>
-
+  if (!client) {
+    return (
       <Card>
         <CardHeader>
-          <CardTitle>No data yet</CardTitle>
-          <CardDescription>
-            Once your data sources are connected and synced, your dashboard will
-            appear here. Widgets arrive in Phase 4.
-          </CardDescription>
+          <CardTitle>No dashboard assigned</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
-          If you believe this is an error, contact your Broadbrand account
-          manager.
+          Your account isn&apos;t linked to a client yet. Please contact your
+          Broadbrand account manager.
         </CardContent>
       </Card>
-    </div>
-  );
+    );
+  }
+
+  return <ClientDashboard client={client} />;
 }

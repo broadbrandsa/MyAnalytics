@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #111">
+    <h2>You've been invited to Broadbrand Analytics</h2>
+    <p>
+      You've been given access to your marketing analytics dashboard. Click below
+      to set your password and sign in.
+    </p>
+    <p>
+      <a
+        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/"
+        style="display:inline-block;padding:10px 16px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none"
+        >Accept invitation</a
+      >
+    </p>
+    <p style="color:#666;font-size:13px">
+      If you weren't expecting this, you can ignore this email.
+    </p>
+  </body>
+</html>

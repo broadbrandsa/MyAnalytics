@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { ArrowRight, Building2, Plug, LayoutDashboard } from "lucide-react";
+import { listClients } from "@/lib/data/clients";
 import {
   Card,
   CardContent,
@@ -7,55 +9,53 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/**
- * Admin home. Phase 1 fleshes this out into client CRUD + user invites;
- * for now it lists clients (admins read all via RLS) to prove the wiring.
- */
 export default async function AdminHome() {
-  const supabase = await createClient();
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id, name, slug, is_archived, created_at")
-    .order("created_at", { ascending: false });
+  const clients = await listClients(true);
+  const active = clients.filter((c) => !c.is_archived).length;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Admin</h1>
+        <h1 className="text-2xl font-semibold">Overview</h1>
         <p className="text-muted-foreground text-sm">
           Manage clients, connections, and dashboards.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Clients</CardTitle>
-          <CardDescription>
-            {clients?.length ?? 0} client{clients?.length === 1 ? "" : "s"}.
-            Client management arrives in Phase 1.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {clients && clients.length > 0 ? (
-            <ul className="divide-y">
-              {clients.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex items-center justify-between py-2"
-                >
-                  <span>{c.name}</span>
-                  <span className="text-muted-foreground text-sm">
-                    {c.slug}
-                    {c.is_archived ? " · archived" : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No clients yet.</p>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Link href="/admin/clients">
+          <Card className="hover:border-foreground/20 h-full transition-colors">
+            <CardHeader>
+              <Building2 className="text-muted-foreground size-5" />
+              <CardTitle className="mt-2 text-3xl">{active}</CardTitle>
+              <CardDescription>Active clients</CardDescription>
+            </CardHeader>
+            <CardContent className="text-primary flex items-center gap-1 text-sm">
+              Manage clients <ArrowRight className="size-4" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Card className="h-full opacity-70">
+          <CardHeader>
+            <Plug className="text-muted-foreground size-5" />
+            <CardTitle className="mt-2 text-base">Connections</CardTitle>
+            <CardDescription>
+              Google &amp; Meta connections — Phase 2.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card className="h-full opacity-70">
+          <CardHeader>
+            <LayoutDashboard className="text-muted-foreground size-5" />
+            <CardTitle className="mt-2 text-base">Dashboards</CardTitle>
+            <CardDescription>
+              Per-client dashboard editor — Phase 5.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     </div>
   );
 }
