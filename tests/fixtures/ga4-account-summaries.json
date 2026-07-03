@@ -1,0 +1,20 @@
+{
+  "accountSummaries": [
+    {
+      "account": "accounts/1000001",
+      "displayName": "Acme Group",
+      "propertySummaries": [
+        {
+          "property": "properties/300000001",
+          "displayName": "Acme — Web",
+          "propertyType": "PROPERTY_TYPE_ORDINARY"
+        },
+        {
+          "property": "properties/300000002",
+          "displayName": "Acme — App",
+          "propertyType": "PROPERTY_TYPE_ORDINARY"
+        }
+      ]
+    }
+  ]
+}

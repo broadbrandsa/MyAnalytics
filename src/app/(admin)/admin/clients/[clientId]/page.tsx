@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Eye } from "lucide-react";
 import { getClient, getClientMembers } from "@/lib/data/clients";
+import { listDataSources } from "@/lib/data/sources";
+import { SourcesManager } from "@/components/admin/sources-manager";
 import { updateClientOrg } from "@/lib/actions/clients";
 import { ClientForm } from "@/components/admin/client-form";
 import { ArchiveClientButton } from "@/components/admin/archive-client-button";
@@ -9,7 +11,13 @@ import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
 import { MemberRowActions } from "@/components/admin/member-row-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -30,6 +38,7 @@ export default async function ClientDetailPage({
   if (!client) notFound();
 
   const members = await getClientMembers(clientId);
+  const dataSources = await listDataSources(clientId);
   const roleLabel = (r: string) =>
     r === "super_admin" ? "Super admin" : r === "admin" ? "Admin" : "Viewer";
 
@@ -152,10 +161,17 @@ export default async function ClientDetailPage({
           <Card>
             <CardHeader>
               <CardTitle>Data sources</CardTitle>
+              <CardDescription>
+                Assign platform accounts to this client. Connect Google &amp;
+                Meta first under{" "}
+                <Link href="/admin/connections" className="underline">
+                  Connections
+                </Link>
+                .
+              </CardDescription>
             </CardHeader>
-            <CardContent className="text-muted-foreground text-sm">
-              Connecting Google &amp; Meta and assigning GA4 / Search Console /
-              Google Ads / Meta accounts arrives in Phase 2.
+            <CardContent>
+              <SourcesManager clientId={clientId} sources={dataSources} />
             </CardContent>
           </Card>
         </TabsContent>

@@ -47,7 +47,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/invite") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api/oauth");
+    pathname.startsWith("/api/oauth") ||
+    // Cron/sync workers self-authenticate via CRON_SECRET (hard rule #8);
+    // they must not be bounced to /login by the session guard.
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/api/sync");
 
   // Unauthenticated users hitting a protected page → login.
   if (!user && !isPublic) {

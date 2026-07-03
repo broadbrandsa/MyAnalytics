@@ -1,0 +1,40 @@
+[
+  {
+    "results": [
+      {
+        "customerClient": {
+          "id": "1234567890",
+          "descriptiveName": "Acme Retail",
+          "manager": false,
+          "status": "ENABLED",
+          "currencyCode": "ZAR",
+          "timeZone": "Africa/Johannesburg"
+        }
+      },
+      {
+        "customerClient": {
+          "id": "2222222222",
+          "descriptiveName": "Acme Sub-MCC",
+          "manager": true,
+          "status": "ENABLED",
+          "currencyCode": "ZAR",
+          "timeZone": "Africa/Johannesburg"
+        }
+      }
+    ]
+  },
+  {
+    "results": [
+      {
+        "customerClient": {
+          "id": "3333333333",
+          "descriptiveName": "Acme Cancelled",
+          "manager": false,
+          "status": "CANCELED",
+          "currencyCode": "USD",
+          "timeZone": "America/New_York"
+        }
+      }
+    ]
+  }
+]

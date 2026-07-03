@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "act_111111111",
+      "name": "Acme — Prospecting",
+      "account_status": 1,
+      "currency": "ZAR",
+      "timezone_name": "Africa/Johannesburg"
+    },
+    {
+      "id": "act_222222222",
+      "name": "Acme — Retargeting",
+      "account_status": 1,
+      "currency": "ZAR",
+      "timezone_name": "Africa/Johannesburg"
+    }
+  ],
+  "paging": {
+    "cursors": { "after": "MjQZD" }
+  }
+}

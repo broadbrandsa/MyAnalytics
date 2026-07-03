@@ -15,6 +15,7 @@ export default async function AdminLayout({
       nav={[
         { href: "/admin", label: "Overview" },
         { href: "/admin/clients", label: "Clients" },
+        { href: "/admin/connections", label: "Connections" },
       ]}
     >
       {children}

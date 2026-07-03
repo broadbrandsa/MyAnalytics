@@ -1,5 +1,9 @@
 import "server-only";
-import { GOOGLE_TOKEN_URL } from "@/lib/constants";
+import {
+  GOOGLE_TOKEN_URL,
+  GOOGLE_AUTH_URL,
+  GOOGLE_SCOPES,
+} from "@/lib/constants";
 import { readSecret } from "@/lib/integrations/shared/vault";
 
 /**
@@ -71,4 +75,79 @@ export async function getGoogleAccessToken(
   };
   cache.set(vaultSecretId, token);
   return token.accessToken;
+}
+
+/**
+ * Builds the Google OAuth consent URL for the one agency grant.
+ * `access_type=offline` + `prompt=consent` guarantees a refresh token every
+ * time (doc 08 §A.5). `include_granted_scopes` merges previously granted scopes.
+ */
+export function buildGoogleAuthUrl(redirectUri: string, state: string): string {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: GOOGLE_SCOPES.join(" "),
+    access_type: "offline",
+    prompt: "consent",
+    include_granted_scopes: "true",
+    state,
+  });
+  return `${GOOGLE_AUTH_URL}?${params.toString()}`;
+}
+
+export interface GoogleTokenExchange {
+  refreshToken: string;
+  accessToken: string;
+  scopes: string[];
+  expiresIn: number;
+}
+
+/**
+ * Exchanges an OAuth authorization code for tokens. Returns the refresh token
+ * (to store in Vault) plus granted scopes. Throws if no refresh token comes
+ * back (happens when the user previously granted without prompt=consent).
+ */
+export async function exchangeCodeForTokens(
+  code: string,
+  redirectUri: string,
+): Promise<GoogleTokenExchange> {
+  const res = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+      code,
+    }),
+  });
+
+  const json = (await res.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    scope?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
+
+  if (!res.ok || !json.access_token) {
+    throw new Error(
+      `Google code exchange failed: ${json.error_description ?? json.error ?? res.status}`,
+    );
+  }
+  if (!json.refresh_token) {
+    throw new Error(
+      "Google did not return a refresh token. Re-authorize with consent (revoke prior access at myaccount.google.com/permissions).",
+    );
+  }
+
+  return {
+    refreshToken: json.refresh_token,
+    accessToken: json.access_token,
+    scopes: json.scope ? json.scope.split(" ") : [],
+    expiresIn: json.expires_in ?? 3600,
+  };
 }
