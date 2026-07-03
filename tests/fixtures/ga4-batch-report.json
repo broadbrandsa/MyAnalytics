@@ -1,0 +1,103 @@
+{
+  "reports": [
+    {
+      "dimensionHeaders": [
+        { "name": "date" },
+        { "name": "sessionDefaultChannelGroup" }
+      ],
+      "metricHeaders": [
+        { "name": "sessions" },
+        { "name": "totalUsers" },
+        { "name": "newUsers" },
+        { "name": "engagedSessions" },
+        { "name": "engagementRate" },
+        { "name": "keyEvents" },
+        { "name": "totalRevenue" }
+      ],
+      "rows": [
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "Organic Search" }],
+          "metricValues": [
+            { "value": "120" },
+            { "value": "100" },
+            { "value": "40" },
+            { "value": "90" },
+            { "value": "0.75" },
+            { "value": "8" },
+            { "value": "1500.5" }
+          ]
+        },
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "Paid Search" }],
+          "metricValues": [
+            { "value": "80" },
+            { "value": "70" },
+            { "value": "30" },
+            { "value": "60" },
+            { "value": "0.7" },
+            { "value": "5" },
+            { "value": "900" }
+          ]
+        }
+      ],
+      "rowCount": 2
+    },
+    {
+      "dimensionHeaders": [{ "name": "date" }],
+      "metricHeaders": [
+        { "name": "sessions" },
+        { "name": "totalUsers" },
+        { "name": "newUsers" },
+        { "name": "engagedSessions" },
+        { "name": "engagementRate" },
+        { "name": "keyEvents" },
+        { "name": "totalRevenue" }
+      ],
+      "rows": [
+        {
+          "dimensionValues": [{ "value": "20260701" }],
+          "metricValues": [
+            { "value": "200" },
+            { "value": "170" },
+            { "value": "70" },
+            { "value": "150" },
+            { "value": "0.73" },
+            { "value": "13" },
+            { "value": "2400.5" }
+          ]
+        }
+      ],
+      "rowCount": 1
+    },
+    {
+      "dimensionHeaders": [{ "name": "date" }, { "name": "landingPage" }],
+      "metricHeaders": [{ "name": "sessions" }, { "name": "keyEvents" }],
+      "rows": [
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "/home" }],
+          "metricValues": [{ "value": "150" }, { "value": "9" }]
+        },
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "/pricing" }],
+          "metricValues": [{ "value": "50" }, { "value": "4" }]
+        }
+      ],
+      "rowCount": 2
+    },
+    {
+      "dimensionHeaders": [{ "name": "date" }, { "name": "deviceCategory" }],
+      "metricHeaders": [{ "name": "sessions" }],
+      "rows": [
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "desktop" }],
+          "metricValues": [{ "value": "130" }]
+        },
+        {
+          "dimensionValues": [{ "value": "20260701" }, { "value": "mobile" }],
+          "metricValues": [{ "value": "70" }]
+        }
+      ],
+      "rowCount": 2
+    }
+  ]
+}

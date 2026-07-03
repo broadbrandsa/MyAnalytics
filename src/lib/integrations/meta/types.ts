@@ -58,3 +58,102 @@ export function parseMetaAdAccountsPage(json: unknown): {
     after: page.paging?.next ? page.paging?.cursors?.after : undefined,
   };
 }
+
+// --- Insights (act_{id}/insights) ---
+
+const numeric = z.union([z.string(), z.number()]).optional();
+const n = (v: string | number | undefined): number => {
+  const x = typeof v === "number" ? v : Number(v ?? 0);
+  return Number.isFinite(x) ? x : 0;
+};
+
+const metaActionSchema = z.object({
+  action_type: z.string(),
+  value: z.union([z.string(), z.number()]).optional(),
+});
+
+const metaInsightRowSchema = z.object({
+  date_start: z.string(),
+  campaign_id: z.string().optional(),
+  campaign_name: z.string().optional(),
+  impressions: numeric,
+  clicks: numeric,
+  spend: numeric,
+  cpm: numeric,
+  cpc: numeric,
+  ctr: numeric,
+  reach: numeric,
+  actions: z.array(metaActionSchema).optional(),
+});
+
+export const metaInsightsResponseSchema = z.object({
+  data: z.array(metaInsightRowSchema),
+  paging: z.object({ next: z.string().optional() }).optional(),
+});
+
+/** Default primary-action preference order for extracting `conversions`. */
+export const DEFAULT_META_ACTIONS = [
+  "offsite_conversion.fb_pixel_purchase",
+  "purchase",
+  "lead",
+  "offsite_conversion.fb_pixel_lead",
+];
+
+export interface MetaDailyRow {
+  metric_date: string;
+  campaign_id: string;
+  campaign_name: string | null;
+  impressions: number;
+  reach: number | null;
+  clicks: number;
+  spend: number;
+  cpm: number | null;
+  cpc: number | null;
+  ctr: number | null;
+  actions: { action_type: string; value?: string | number }[] | null;
+  conversions: number;
+}
+
+function extractConversions(
+  actions: { action_type: string; value?: string | number }[] | undefined,
+  preference: string[],
+): number {
+  if (!actions?.length) return 0;
+  for (const type of preference) {
+    const hit = actions.find((a) => a.action_type === type);
+    if (hit) return n(hit.value);
+  }
+  return 0;
+}
+
+/**
+ * Normalizes an insights response (level=campaign or account) → metrics_meta
+ * rows. Account-level rows become the TOTAL campaign row and are the only
+ * reliable source of reach (not summable). `primaryAction` (from
+ * data_sources.config.primary_action) is tried first for conversions.
+ */
+export function normalizeMetaInsights(
+  json: unknown,
+  level: "campaign" | "account",
+  primaryAction?: string | null,
+): MetaDailyRow[] {
+  const parsed = metaInsightsResponseSchema.parse(json);
+  const preference = primaryAction
+    ? [primaryAction, ...DEFAULT_META_ACTIONS]
+    : DEFAULT_META_ACTIONS;
+
+  return parsed.data.map((r) => ({
+    metric_date: r.date_start,
+    campaign_id: level === "account" ? "TOTAL" : (r.campaign_id ?? "TOTAL"),
+    campaign_name: level === "account" ? null : (r.campaign_name ?? null),
+    impressions: n(r.impressions),
+    reach: level === "account" ? n(r.reach) : null,
+    clicks: n(r.clicks),
+    spend: n(r.spend),
+    cpm: r.cpm !== undefined ? n(r.cpm) : null,
+    cpc: r.cpc !== undefined ? n(r.cpc) : null,
+    ctr: r.ctr !== undefined ? n(r.ctr) : null,
+    actions: r.actions ?? null,
+    conversions: extractConversions(r.actions, preference),
+  }));
+}

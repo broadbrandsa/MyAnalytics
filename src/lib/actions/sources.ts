@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getCredentialByProvider } from "@/lib/data/credentials";
@@ -16,6 +17,7 @@ import { listGa4Properties } from "@/lib/integrations/ga4/client";
 import { listGscSites } from "@/lib/integrations/gsc/client";
 import { listGadsAccounts } from "@/lib/integrations/gads/client";
 import { listAdAccounts } from "@/lib/integrations/meta/client";
+import { callBackfill } from "@/lib/sync/dispatch";
 import { type ActionResult } from "@/lib/actions/result";
 
 export interface SourceOption {
@@ -133,14 +135,18 @@ export async function assignSource(input: AssignInput): Promise<ActionResult> {
   if (input.timezone) config.timezone = input.timezone;
 
   const supabase = await createClient();
-  const { error } = await supabase.from("data_sources").insert({
-    client_id: input.clientId,
-    credential_id: cred.id,
-    source: input.source,
-    external_id: input.externalId,
-    display_name: input.displayName,
-    config,
-  });
+  const { data: inserted, error } = await supabase
+    .from("data_sources")
+    .insert({
+      client_id: input.clientId,
+      credential_id: cred.id,
+      source: input.source,
+      external_id: input.externalId,
+      display_name: input.displayName,
+      config,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (error.code === "23505") {
@@ -149,8 +155,12 @@ export async function assignSource(input: AssignInput): Promise<ActionResult> {
     return { ok: false, error: error.message };
   }
 
+  // Kick off the 13-month backfill chain after responding (doc 02).
+  const newId = inserted.id;
+  after(() => callBackfill(newId, 0));
+
   revalidatePath(`/admin/clients/${input.clientId}`);
-  return { ok: true, message: "Source assigned." };
+  return { ok: true, message: "Source assigned. Backfill started." };
 }
 
 /** Remove a source assignment (cascades its cached metrics). */

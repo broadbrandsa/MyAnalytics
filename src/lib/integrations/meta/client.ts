@@ -5,9 +5,11 @@ import {
   metaMeSchema,
   metaTokenExchangeSchema,
   metaErrorSchema,
+  metaInsightsResponseSchema,
   parseMetaAdAccountsPage,
   type MetaAdAccount,
 } from "@/lib/integrations/meta/types";
+import type { DateWindow } from "@/lib/sync/windows";
 
 /**
  * Meta Graph/Marketing API client. All server calls include `appsecret_proof`
@@ -116,4 +118,60 @@ export async function listAdAccounts(
   } while (after);
 
   return out;
+}
+
+const CAMPAIGN_FIELDS =
+  "campaign_id,campaign_name,impressions,clicks,spend,cpm,cpc,ctr,reach,actions,date_start";
+const ACCOUNT_FIELDS =
+  "impressions,clicks,spend,cpm,cpc,ctr,reach,actions,date_start";
+
+/**
+ * Insights for an ad account over the window (doc 07). `time_increment=1` →
+ * one row per day. Follows paging.next cursors and returns the combined
+ * `{ data }` for normalizeMetaInsights. `level=account` yields TOTAL + reach.
+ */
+export async function fetchMetaInsights(
+  accessToken: string,
+  actId: string,
+  window: DateWindow,
+  level: "campaign" | "account",
+): Promise<{ data: unknown[] }> {
+  const first = new URL(`${META_BASE}/${actId}/insights`);
+  first.searchParams.set("level", level);
+  first.searchParams.set(
+    "fields",
+    level === "account" ? ACCOUNT_FIELDS : CAMPAIGN_FIELDS,
+  );
+  first.searchParams.set(
+    "time_range",
+    JSON.stringify({ since: window.start, until: window.end }),
+  );
+  first.searchParams.set("time_increment", "1");
+  first.searchParams.set("limit", "500");
+  first.searchParams.set("access_token", accessToken);
+  first.searchParams.set("appsecret_proof", appSecretProof(accessToken));
+
+  const data: unknown[] = [];
+  let url: string | undefined = first.toString();
+
+  while (url) {
+    const res = await fetch(url, { cache: "no-store" });
+    const json = await res.json();
+    if (!res.ok) {
+      const parsed = metaErrorSchema.safeParse(json);
+      if (parsed.success) {
+        throw new MetaApiError(
+          parsed.data.error.message,
+          parsed.data.error.code,
+          parsed.data.error.error_subcode,
+        );
+      }
+      throw new MetaApiError(`Meta insights error (HTTP ${res.status})`);
+    }
+    const page = metaInsightsResponseSchema.parse(json);
+    data.push(...page.data);
+    url = page.paging?.next;
+  }
+
+  return { data };
 }

@@ -2,6 +2,7 @@ import "server-only";
 import { GADS_BASE } from "@/lib/constants";
 import { googleFetchJson } from "@/lib/integrations/shared/google-fetch";
 import { parseGadsAccounts, type GadsAccount } from "@/lib/integrations/gads/types";
+import type { DateWindow } from "@/lib/sync/windows";
 
 /**
  * Required headers on every Google Ads REST call (doc 06). login-customer-id is
@@ -44,4 +45,28 @@ export async function listGadsAccounts(
   });
 
   return parseGadsAccounts(json);
+}
+
+/**
+ * Campaign performance for a customer over the window (doc 06). One
+ * searchStream call; returns the raw chunk array for normalizeGadsCampaigns.
+ */
+export function fetchGadsCampaignReport(
+  accessToken: string,
+  customerId: string,
+  window: DateWindow,
+): Promise<unknown> {
+  const id = customerId.replace(/\D/g, "");
+  const query =
+    "SELECT segments.date, campaign.id, campaign.name, " +
+    "metrics.impressions, metrics.clicks, metrics.cost_micros, " +
+    "metrics.conversions, metrics.conversions_value " +
+    `FROM campaign WHERE segments.date BETWEEN '${window.start}' AND '${window.end}' ` +
+    "ORDER BY segments.date";
+
+  return googleFetchJson(
+    `${GADS_BASE}/customers/${id}/googleAds:searchStream`,
+    accessToken,
+    { method: "POST", headers: adsHeaders(), body: JSON.stringify({ query }) },
+  );
 }

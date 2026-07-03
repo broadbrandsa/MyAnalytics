@@ -1,5 +1,12 @@
-// Google Ads (REST) — zod schemas. Sync-report schemas: Phase 3.
+// Google Ads (REST) — zod schemas + pure normalizers.
 import { z } from "zod";
+
+/** int64 fields arrive as strings, doubles as numbers. */
+const num = (v: string | number | undefined): number => {
+  const n = typeof v === "number" ? v : Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+const numeric = z.union([z.string(), z.number()]).optional();
 
 /**
  * customer_client rows from googleAds:searchStream. REST returns lowerCamelCase
@@ -54,4 +61,84 @@ export function parseGadsAccounts(json: unknown): GadsAccount[] {
     }
   }
   return out;
+}
+
+// --- Campaign report (googleAds:searchStream) ---
+
+const gadsReportRowSchema = z.object({
+  segments: z.object({ date: z.string() }),
+  campaign: z
+    .object({ id: z.string(), name: z.string().optional() })
+    .optional(),
+  metrics: z
+    .object({
+      impressions: numeric,
+      clicks: numeric,
+      costMicros: numeric,
+      conversions: numeric,
+      conversionsValue: numeric,
+    })
+    .optional(),
+});
+
+export const gadsReportResponseSchema = z.array(
+  z.object({ results: z.array(gadsReportRowSchema).optional() }),
+);
+
+export interface GadsDailyRow {
+  metric_date: string;
+  campaign_id: string;
+  campaign_name: string | null;
+  impressions: number;
+  clicks: number;
+  cost: number;
+  conversions: number;
+  conversions_value: number;
+}
+
+/**
+ * Normalizes a campaign searchStream response → per-campaign rows plus a
+ * summed TOTAL row per date (all these metrics are summable). Money:
+ * cost_micros / 1e6 at write time (CLAUDE.md hard rule #9).
+ */
+export function normalizeGadsCampaigns(json: unknown): GadsDailyRow[] {
+  const chunks = gadsReportResponseSchema.parse(json);
+  const perCampaign: GadsDailyRow[] = [];
+  const totals: Record<string, GadsDailyRow> = {};
+
+  for (const chunk of chunks) {
+    for (const row of chunk.results ?? []) {
+      const date = row.segments.date;
+      const m = row.metrics ?? {};
+      const rec: GadsDailyRow = {
+        metric_date: date,
+        campaign_id: row.campaign?.id ?? "UNKNOWN",
+        campaign_name: row.campaign?.name ?? null,
+        impressions: num(m.impressions),
+        clicks: num(m.clicks),
+        cost: num(m.costMicros) / 1_000_000,
+        conversions: num(m.conversions),
+        conversions_value: num(m.conversionsValue),
+      };
+      perCampaign.push(rec);
+
+      const t = (totals[date] ??= {
+        metric_date: date,
+        campaign_id: "TOTAL",
+        campaign_name: null,
+        impressions: 0,
+        clicks: 0,
+        cost: 0,
+        conversions: 0,
+        conversions_value: 0,
+      });
+      t.impressions += rec.impressions;
+      t.clicks += rec.clicks;
+      t.cost += rec.cost;
+      t.conversions += rec.conversions;
+      t.conversions_value += rec.conversions_value;
+    }
+  }
+
+  return [...perCampaign, ...Object.values(totals)];
 }

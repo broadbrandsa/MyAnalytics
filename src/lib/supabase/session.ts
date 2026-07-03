@@ -51,10 +51,16 @@ export async function updateSession(request: NextRequest) {
     // Cron/sync workers self-authenticate via CRON_SECRET (hard rule #8);
     // they must not be bounced to /login by the session guard.
     pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/sync");
+    pathname.startsWith("/api/sync") ||
+    pathname.startsWith("/api/backfill");
 
-  // Unauthenticated users hitting a protected page → login.
+  // Unauthenticated users hitting a protected route.
   if (!user && !isPublic) {
+    // API routes get a clean 401 (fetch shouldn't follow a redirect to HTML);
+    // page routes get bounced to login.
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

@@ -1,0 +1,28 @@
+[
+  {
+    "results": [
+      {
+        "segments": { "date": "2026-07-01" },
+        "campaign": { "id": "111", "name": "Search — Brand" },
+        "metrics": {
+          "impressions": "1200",
+          "clicks": "90",
+          "costMicros": "45000000",
+          "conversions": 7.0,
+          "conversionsValue": 3500.0
+        }
+      },
+      {
+        "segments": { "date": "2026-07-01" },
+        "campaign": { "id": "222", "name": "Search — Generic" },
+        "metrics": {
+          "impressions": "800",
+          "clicks": "40",
+          "costMicros": "25000000",
+          "conversions": 3.0,
+          "conversionsValue": 1500.0
+        }
+      }
+    ]
+  }
+]

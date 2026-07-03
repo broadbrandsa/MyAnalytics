@@ -1,0 +1,6 @@
+{
+  "rows": [
+    { "keys": ["2026-06-25", "DESKTOP"], "clicks": 70, "impressions": 2000, "ctr": 0.035, "position": 7.9 },
+    { "keys": ["2026-06-25", "MOBILE"], "clicks": 50, "impressions": 1400, "ctr": 0.0357, "position": 8.6 }
+  ]
+}
