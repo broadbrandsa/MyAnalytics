@@ -6,6 +6,7 @@ import {
   exchangeForLongLivedToken,
   validateMetaToken,
 } from "@/lib/integrations/meta/client";
+import { sendAlert } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -66,6 +67,9 @@ export async function POST(request: NextRequest) {
       .from("oauth_credentials")
       .update({ status: "needs_reauth" })
       .eq("id", cred.id);
+    await sendAlert(
+      "Meta system-user token refresh failed — reconnect required in Connections.",
+    );
     return NextResponse.json(
       { ok: false, error: "refresh_failed" },
       { status: 500 },

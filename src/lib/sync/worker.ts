@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getGoogleAccessToken } from "@/lib/integrations/shared/google-auth";
 import { readSecret } from "@/lib/integrations/shared/vault";
 import { markCredentialNeedsReauth } from "@/lib/integrations/shared/credentials-store";
+import { sendAlert } from "@/lib/alerts";
 import { startSyncRun, finalizeSyncRun } from "@/lib/sync/run";
 import { classifyError } from "@/lib/sync/errors";
 import { windowForTrigger, type DateWindow, type SyncTrigger } from "@/lib/sync/windows";
@@ -108,11 +109,17 @@ export async function runSourceSync(
 
     if (c.action === "needs_reauth") {
       await markCredentialNeedsReauth(cred.id);
+      await sendAlert(
+        `${cred.provider} credential needs re-authorization — ${ds.source} sync failed (${c.errorCode}).`,
+      );
     } else if (c.action === "deactivate") {
       await svc
         .from("data_sources")
         .update({ is_active: false })
         .eq("id", ds.id);
+      await sendAlert(
+        `Source deactivated — lost access to ${ds.source} "${ds.display_name}" (${c.errorCode}).`,
+      );
     }
     // defer / fail: recorded on the run; next cron retries.
     return { status: "error", error: c.errorMessage };
