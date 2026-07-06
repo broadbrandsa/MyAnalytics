@@ -80,6 +80,67 @@ export async function loadDashboard(
     (gads?.kpis.conversions.value ?? 0) + (meta?.kpis.conversions.value ?? 0),
     (gads?.kpis.conversions.prev ?? 0) + (meta?.kpis.conversions.prev ?? 0),
   );
+  const revenue = ga4?.kpis.totalRevenue ?? mkKpi(0, 0);
+
+  // Blended daily spend (Google Ads cost + Meta spend) for the overview trend.
+  const spendByDate = new Map<string, number>();
+  for (const p of gads?.series ?? [])
+    spendByDate.set(p.date, (spendByDate.get(p.date) ?? 0) + p.cost);
+  for (const p of meta?.series ?? [])
+    spendByDate.set(p.date, (spendByDate.get(p.date) ?? 0) + p.spend);
+  const spendSeries = [...spendByDate.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([date, s]) => ({ date, spend: Math.round(s * 100) / 100 }));
+
+  // Paid spend split (donut).
+  const spendByChannel = [
+    { channel: "Google Ads", spend: gads?.kpis.cost.value ?? 0 },
+    { channel: "Meta Ads", spend: meta?.kpis.spend.value ?? 0 },
+  ].filter((c) => c.spend > 0);
+
+  // Cross-channel comparison (connected sources only).
+  const div = (a: number, b: number) => (b ? a / b : null);
+  const channelComparison = [];
+  if (gads) {
+    channelComparison.push({
+      channel: "Google Ads",
+      spend: gads.kpis.cost.value,
+      clicks: gads.kpis.clicks.value,
+      conversions: gads.kpis.conversions.value,
+      cpa: div(gads.kpis.cost.value, gads.kpis.conversions.value),
+      roas: div(gads.kpis.conversionsValue.value, gads.kpis.cost.value),
+    });
+  }
+  if (meta) {
+    channelComparison.push({
+      channel: "Meta Ads",
+      spend: meta.kpis.spend.value,
+      clicks: meta.kpis.clicks.value,
+      conversions: meta.kpis.conversions.value,
+      cpa: div(meta.kpis.spend.value, meta.kpis.conversions.value),
+      roas: null, // Meta conversion value not captured
+    });
+  }
+  if (ga4) {
+    channelComparison.push({
+      channel: "Google Analytics",
+      spend: null,
+      clicks: null,
+      conversions: ga4.kpis.keyEvents.value,
+      cpa: null,
+      roas: null,
+    });
+  }
+  if (gsc) {
+    channelComparison.push({
+      channel: "Search Console",
+      spend: null,
+      clicks: gsc.kpis.clicks.value,
+      conversions: null,
+      cpa: null,
+      roas: null,
+    });
+  }
 
   return {
     connected,
@@ -88,10 +149,14 @@ export async function loadDashboard(
     range: { start, end, label: range.label, compare },
     overview: {
       spend,
+      conversions,
+      revenue,
       sessions: ga4?.kpis.sessions ?? mkKpi(0, 0),
       keyEvents: ga4?.kpis.keyEvents ?? mkKpi(0, 0),
-      conversions,
     },
+    spendSeries,
+    spendByChannel,
+    channelComparison,
     ga4,
     gads,
     meta,
@@ -123,7 +188,7 @@ async function loadGa4(
   const { data: totalRows } = await svc
     .from("metrics_ga4_daily")
     .select(
-      "metric_date, sessions, total_users, new_users, engaged_sessions, key_events, device_split",
+      "metric_date, sessions, total_users, new_users, engaged_sessions, key_events, total_revenue, device_split",
     )
     .eq("client_id", clientId)
     .eq("channel", "TOTAL")
@@ -188,6 +253,7 @@ async function loadGa4(
       totalUsers: kpiFromWindows(cur, prev, "total_users", compare),
       newUsers: kpiFromWindows(cur, prev, "new_users", compare),
       keyEvents: kpiFromWindows(cur, prev, "key_events", compare),
+      totalRevenue: kpiFromWindows(cur, prev, "total_revenue", compare),
       engagementRate: {
         value: engRate(cur),
         prev: compare ? engRate(prev) : null,

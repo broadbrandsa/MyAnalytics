@@ -12,11 +12,13 @@ export interface Column<T> {
   key: keyof T & string;
   label: string;
   numeric?: boolean;
-  format?: (value: T[keyof T & string], row: T) => string;
+  format?: (value: T[keyof T & string]) => string;
 }
 
 /** Compact data table for campaigns / queries / landing pages. */
-export function MetricTable<T extends Record<string, string | number>>({
+export function MetricTable<
+  T extends Record<string, string | number | null>,
+>({
   columns,
   rows,
   empty = "No data for this period.",
@@ -54,7 +56,11 @@ export function MetricTable<T extends Record<string, string | number>>({
                     !c.numeric && "max-w-[280px] truncate",
                   )}
                 >
-                  {c.format ? c.format(row[c.key], row) : String(row[c.key])}
+                  {c.format
+                    ? c.format(row[c.key])
+                    : row[c.key] == null
+                      ? "—"
+                      : String(row[c.key])}
                 </TableCell>
               ))}
             </TableRow>

@@ -40,7 +40,12 @@ export default async function ClientPreviewPage({
           Back to client
         </Button>
       </div>
-      <DashboardScreen client={client} params={sp} refreshClientId={clientId} />
+      <DashboardScreen
+        client={client}
+        params={sp}
+        refreshClientId={clientId}
+        embedded
+      />
     </div>
   );
 }

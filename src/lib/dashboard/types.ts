@@ -14,6 +14,7 @@ export interface Ga4Data {
     newUsers: Kpi;
     engagementRate: Kpi;
     keyEvents: Kpi;
+    totalRevenue: Kpi;
   };
   sessionsSeries: { date: string; sessions: number }[];
   channelDonut: { channel: string; sessions: number }[];
@@ -71,6 +72,15 @@ export interface GscData {
   pages: { page: string; clicks: number; impressions: number; position: number }[];
 }
 
+export type ChannelComparisonRow = {
+  channel: string;
+  spend: number | null;
+  clicks: number | null;
+  conversions: number | null;
+  cpa: number | null;
+  roas: number | null;
+};
+
 export interface DashboardData {
   connected: Record<Source, boolean>;
   lastSyncedAt: string | null;
@@ -78,10 +88,17 @@ export interface DashboardData {
   range: { start: string; end: string; label: string; compare: boolean };
   overview: {
     spend: Kpi;
+    conversions: Kpi;
+    revenue: Kpi;
     sessions: Kpi;
     keyEvents: Kpi;
-    conversions: Kpi;
   };
+  /** Blended daily spend (Google Ads + Meta) for the overview trend. */
+  spendSeries: { date: string; spend: number }[];
+  /** Paid spend split for the overview donut. */
+  spendByChannel: { channel: string; spend: number }[];
+  /** Cross-channel comparison table rows (connected sources only). */
+  channelComparison: ChannelComparisonRow[];
   ga4: Ga4Data | null;
   gads: AdsData | null;
   meta: MetaData | null;

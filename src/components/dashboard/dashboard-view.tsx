@@ -14,7 +14,7 @@ import {
   fmtPct,
   fmtPosition,
 } from "@/lib/dashboard/format";
-import type { DashboardData } from "@/lib/dashboard/types";
+import type { DashboardData, Kpi } from "@/lib/dashboard/types";
 
 import {
   DEFAULT_SECTION_ORDER,
@@ -72,34 +72,102 @@ export function DashboardView({
   );
 }
 
+function derivedKpi(numer: Kpi, denom: Kpi): Kpi {
+  return {
+    value: denom.value ? numer.value / denom.value : 0,
+    prev:
+      numer.prev != null && denom.prev ? numer.prev / denom.prev : null,
+  };
+}
+
 function OverviewSection({ data }: { data: DashboardData }) {
   const cur = (v: number) => fmtCurrency(v, data.currency);
   const num = (v: number) => fmtNumber(v);
+  const { spend, conversions, revenue, sessions } = data.overview;
+  const roas = derivedKpi(revenue, spend);
+  const costPerConv = derivedKpi(spend, conversions);
+
+  const dash = (v: number | null, f: (n: number) => string) =>
+    v == null ? "—" : f(v);
+  const cmpCols: Column<(typeof data.channelComparison)[number]>[] = [
+    { key: "channel", label: "Channel" },
+    { key: "spend", label: "Spend", numeric: true, format: (v) => dash(v as number | null, cur) },
+    { key: "clicks", label: "Clicks", numeric: true, format: (v) => dash(v as number | null, num) },
+    { key: "conversions", label: "Conv.", numeric: true, format: (v) => dash(v as number | null, num) },
+    { key: "cpa", label: "CPA", numeric: true, format: (v) => dash(v as number | null, cur) },
+    { key: "roas", label: "ROAS", numeric: true, format: (v) => dash(v as number | null, (n) => `${n.toFixed(2)}×`) },
+  ];
+
   return (
-    <Section title="Overview">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard label="Total spend" kpi={data.overview.spend} format={cur} />
-        <KpiCard label="Sessions" kpi={data.overview.sessions} format={num} />
-        <KpiCard label="Key events" kpi={data.overview.keyEvents} format={num} />
+    <Section id="overview" title="Overview">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <KpiCard label="Total spend" kpi={spend} format={cur} />
+        <KpiCard label="Conversions" kpi={conversions} format={num} />
         <KpiCard
-          label="Conversions"
-          kpi={data.overview.conversions}
-          format={num}
+          label="Blended ROAS"
+          kpi={roas}
+          format={(v) => `${v.toFixed(2)}×`}
+        />
+        <KpiCard label="Sessions" kpi={sessions} format={num} />
+        <KpiCard
+          label="Cost / conv."
+          kpi={costPerConv}
+          format={cur}
+          higherIsBetter={false}
         />
       </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
+        <ChartCard title="Spend over time">
+          {data.spendSeries.length > 0 ? (
+            <TimeSeries
+              data={data.spendSeries}
+              series={[{ key: "spend", label: "Spend" }]}
+            />
+          ) : (
+            <p className="text-muted-foreground p-4 text-sm">
+              No spend in this period.
+            </p>
+          )}
+        </ChartCard>
+        <ChartCard title="Spend by channel">
+          {data.spendByChannel.length > 0 ? (
+            <Donut
+              data={data.spendByChannel}
+              nameKey="channel"
+              valueKey="spend"
+            />
+          ) : (
+            <p className="text-muted-foreground p-4 text-sm">No paid spend.</p>
+          )}
+        </ChartCard>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">
+            Channel comparison
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <MetricTable columns={cmpCols} rows={data.channelComparison} />
+        </CardContent>
+      </Card>
     </Section>
   );
 }
 
 function Section({
+  id,
   title,
   children,
 }: {
+  id?: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section id={id} className="flex scroll-mt-6 flex-col gap-3">
       <h2 className="text-lg font-semibold">{title}</h2>
       {children}
     </section>
@@ -137,7 +205,7 @@ function Ga4Section({ data }: { data: DashboardData }) {
   ];
 
   return (
-    <Section title="Google Analytics 4">
+    <Section id="ga4" title="Google Analytics 4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <KpiCard label="Sessions" kpi={g.kpis.sessions} format={num} />
         <KpiCard label="Total users" kpi={g.kpis.totalUsers} format={num} />
@@ -197,7 +265,7 @@ function AdsSection({ data }: { data: DashboardData }) {
   ];
 
   return (
-    <Section title="Google Ads">
+    <Section id="google_ads" title="Google Ads">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <KpiCard label="Cost" kpi={a.kpis.cost} format={cur} />
         <KpiCard label="Impressions" kpi={a.kpis.impressions} format={num} />
@@ -256,7 +324,7 @@ function MetaSection({ data }: { data: DashboardData }) {
   ];
 
   return (
-    <Section title="Meta Ads">
+    <Section id="meta_ads" title="Meta Ads">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         <KpiCard label="Spend" kpi={m.kpis.spend} format={cur} />
         <KpiCard label="Impressions" kpi={m.kpis.impressions} format={num} />
@@ -321,7 +389,7 @@ function GscSection({ data }: { data: DashboardData }) {
   ];
 
   return (
-    <Section title="Search Console">
+    <Section id="gsc" title="Search Console">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard label="Clicks" kpi={s.kpis.clicks} format={num} />
         <KpiCard label="Impressions" kpi={s.kpis.impressions} format={num} />
