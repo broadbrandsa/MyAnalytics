@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { listClients } from "@/lib/data/clients";
 import { CreateClientDialog } from "@/components/admin/create-client-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -44,8 +46,8 @@ export default async function ClientsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
                   <TableHead>Currency</TableHead>
-                  <TableHead>Timezone</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Dashboard</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -68,15 +70,25 @@ export default async function ClientsPage() {
                       {c.slug}
                     </TableCell>
                     <TableCell>{c.currency}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {c.timezone}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
                       {c.is_archived ? (
                         <Badge variant="outline">Archived</Badge>
                       ) : (
                         <Badge variant="secondary">Active</Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        nativeButton={false}
+                        render={
+                          <Link href={`/admin/clients/${c.id}/preview`} />
+                        }
+                      >
+                        <BarChart3 className="size-4" />
+                        View dashboard
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
