@@ -1,19 +1,20 @@
 import { redirect } from "next/navigation";
 import { getAccessClientId } from "@/lib/access/cookie";
 import { createServiceClient } from "@/lib/supabase/service";
-import { ClientDashboard } from "@/components/dashboard/client-dashboard";
+import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
+import type { RangeParams } from "@/lib/dashboard/range";
 import type { ClientRow } from "@/lib/data/clients";
 
 /**
  * Code-gated client dashboard. Resolves the client from the signed access
- * cookie and reads ONLY that client's cached data via the service-role client,
- * explicitly filtered by client_id (there is no Supabase session/RLS here).
- *
- * A stale cookie (client archived/deleted) just bounces to "/", which renders
- * the code-entry form — the cookie can't be mutated during RSC render, so it's
- * cleared on the next successful entry or via /access/exit.
+ * cookie and renders the dashboard from cached data only (service-role reads
+ * scoped to that client_id — no Supabase session/RLS here).
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<RangeParams>;
+}) {
   const clientId = await getAccessClientId();
   if (!clientId) redirect("/");
 
@@ -26,5 +27,6 @@ export default async function DashboardPage() {
 
   if (!client || client.is_archived) redirect("/");
 
-  return <ClientDashboard client={client as ClientRow} />;
+  const params = await searchParams;
+  return <DashboardScreen client={client as ClientRow} params={params} />;
 }

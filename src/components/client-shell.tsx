@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 export function ClientShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="border-b">
+      <header className="border-b print:hidden">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4">
           <span className="font-semibold">Broadbrand Analytics</span>
           <form action="/access/exit" method="post">

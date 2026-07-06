@@ -128,3 +128,12 @@
     @apply font-sans;
   }
 }
+/* Print: clean report output (controls/nav are hidden via print:hidden). */
+@media print {
+  body {
+    background: #fff;
+  }
+  [data-slot="card"] {
+    break-inside: avoid;
+  }
+}
