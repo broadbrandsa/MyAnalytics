@@ -29,9 +29,11 @@ const supabase = createClient(url, serviceKey, {
 
 const ADMIN_EMAIL = "admin@broadbrand.local";
 const ADMIN_PASSWORD = "password123";
-const VIEWER_EMAIL = "viewer@democlient.local";
+const VIEWER_EMAIL = "viewer@cps.local";
 const VIEWER_PASSWORD = "password123";
-const DEMO_SLUG = "demo-client";
+const CLIENT_NAME = "CPS";
+const CLIENT_SLUG = "cps";
+const CLIENT_CODE = "9503";
 
 async function findUserByEmail(email: string) {
   // Admin listUsers is paginated; fine for a dev seed with few users.
@@ -84,21 +86,21 @@ async function main() {
     .from("clients")
     .upsert(
       {
-        name: "Demo Client",
-        slug: DEMO_SLUG,
-        brand_color: "#4f46e5",
+        name: CLIENT_NAME,
+        slug: CLIENT_SLUG,
+        brand_color: "#00D9C0",
         timezone: "Africa/Johannesburg",
         currency: "ZAR",
-        access_code: "1234",
+        access_code: CLIENT_CODE,
       },
       { onConflict: "slug" },
     )
     .select("id")
     .single();
   if (clientErr) throw clientErr;
-  console.log(`  demo client ready (${client.id})`);
+  console.log(`  ${CLIENT_NAME} client ready (${client.id})`);
 
-  // Membership: viewer -> demo client.
+  // Membership: viewer -> client.
   const { error: memErr } = await supabase
     .from("memberships")
     .upsert(
@@ -108,14 +110,14 @@ async function main() {
   if (memErr) throw memErr;
   console.log("  membership linked");
 
-  // Empty dashboard config for the demo client.
+  // Empty dashboard config for the client.
   const { error: cfgErr } = await supabase
     .from("dashboard_configs")
     .upsert({ client_id: client.id }, { onConflict: "client_id" });
   if (cfgErr) throw cfgErr;
 
   console.log("\nDone.");
-  console.log("  Client dashboard: http://localhost:3000  → code 1234");
+  console.log(`  Client dashboard: http://localhost:3000  → code ${CLIENT_CODE}`);
   console.log(`  Admin login: http://localhost:3000/login → ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   void adminId;
   void VIEWER_EMAIL;
