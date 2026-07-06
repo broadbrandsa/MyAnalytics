@@ -1,6 +1,10 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createSecret, updateSecret } from "@/lib/integrations/shared/vault";
+import {
+  createSecret,
+  updateSecret,
+  readSecret,
+} from "@/lib/integrations/shared/vault";
 import type { Provider } from "@/lib/data/credentials";
 
 /**
@@ -34,12 +38,19 @@ export async function upsertProviderCredential(opts: {
   const nowIso = new Date().toISOString();
 
   if (existing) {
-    // Rotate the secret in place; if the Vault ref is missing/invalid (e.g. a
-    // seeded placeholder), mint a fresh secret and repoint the row to it.
+    // Rotate the secret in place, then verify it actually took. Vault's
+    // update_secret is a silent no-op on a missing id (e.g. a seeded
+    // placeholder), so a read-back confirms; if it didn't stick, mint a fresh
+    // secret and repoint the row to it.
     let vaultSecretId = existing.vault_secret_id;
+    let rotated = false;
     try {
       await updateSecret(vaultSecretId, opts.secret);
+      rotated = (await readSecret(vaultSecretId)) === opts.secret;
     } catch {
+      rotated = false;
+    }
+    if (!rotated) {
       vaultSecretId = await createSecret(
         opts.secret,
         `${opts.provider}-credential`,
