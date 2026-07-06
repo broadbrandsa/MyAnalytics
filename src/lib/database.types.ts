@@ -712,7 +712,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_vault_secret: {
+        Args: { description?: string; name: string; secret: string }
+        Returns: string
+      }
+      read_vault_secret: { Args: { secret_id: string }; Returns: string }
+      update_vault_secret: {
+        Args: { secret: string; secret_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "client_viewer"
