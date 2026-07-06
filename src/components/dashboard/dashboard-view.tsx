@@ -16,19 +16,13 @@ import {
 } from "@/lib/dashboard/format";
 import type { DashboardData } from "@/lib/dashboard/types";
 
-export type SectionKey = "overview" | "ga4" | "google_ads" | "meta_ads" | "gsc";
-export interface SectionSetting {
-  key: SectionKey;
-  enabled: boolean;
-}
+import {
+  DEFAULT_SECTION_ORDER,
+  type SectionKey,
+  type SectionSetting,
+} from "@/lib/dashboard/sections";
 
-const DEFAULT_ORDER: SectionKey[] = [
-  "overview",
-  "ga4",
-  "google_ads",
-  "meta_ads",
-  "gsc",
-];
+export type { SectionSetting };
 
 /**
  * The read-only dashboard body: combined Overview + per-source sections. Pure
@@ -49,7 +43,7 @@ export function DashboardView({
   const order: SectionKey[] =
     sections && sections.length
       ? sections.filter((s) => s.enabled).map((s) => s.key)
-      : DEFAULT_ORDER;
+      : DEFAULT_SECTION_ORDER;
 
   const rendered: Record<SectionKey, React.ReactNode> = {
     overview: <OverviewSection key="overview" data={data} />,

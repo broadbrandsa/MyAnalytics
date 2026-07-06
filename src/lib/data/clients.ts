@@ -19,6 +19,25 @@ export async function listClients(
   return data ?? [];
 }
 
+export interface DashboardConfigRow {
+  config: unknown;
+  default_date_range: string;
+  notes: string | null;
+}
+
+/** Fetch a client's dashboard config (admin read via RLS). */
+export async function getDashboardConfig(
+  clientId: string,
+): Promise<DashboardConfigRow | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("dashboard_configs")
+    .select("config, default_date_range, notes")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  return (data as DashboardConfigRow | null) ?? null;
+}
+
 /** Fetch a single client org (RLS-scoped). */
 export async function getClient(clientId: string): Promise<ClientRow | null> {
   const supabase = await createClient();

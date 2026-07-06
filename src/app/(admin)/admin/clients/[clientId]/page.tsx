@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Eye } from "lucide-react";
-import { getClient } from "@/lib/data/clients";
+import { getClient, getDashboardConfig } from "@/lib/data/clients";
 import { listDataSources } from "@/lib/data/sources";
 import { SourcesManager } from "@/components/admin/sources-manager";
 import { updateClientOrg } from "@/lib/actions/clients";
 import { ClientForm } from "@/components/admin/client-form";
 import { ArchiveClientButton } from "@/components/admin/archive-client-button";
 import { AccessCodeCard } from "@/components/admin/access-code-card";
+import { DashboardEditor } from "@/components/admin/dashboard-editor";
+import { normalizeSections } from "@/lib/dashboard/sections";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,6 +31,15 @@ export default async function ClientDetailPage({
   if (!client) notFound();
 
   const dataSources = await listDataSources(clientId);
+  const dashCfg = await getDashboardConfig(clientId);
+
+  const initialSections = normalizeSections(
+    (dashCfg?.config as { sections?: unknown })?.sections,
+  );
+  const metaSource = dataSources.find((s) => s.source === "meta_ads");
+  const initialMetaAction =
+    (metaSource?.config as { primary_action?: string } | null)
+      ?.primary_action ?? "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,6 +87,7 @@ export default async function ClientDetailPage({
           <TabsTrigger value="access">Access</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="sources">Data sources</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="access" className="mt-4">
@@ -112,6 +124,33 @@ export default async function ClientDetailPage({
             </CardHeader>
             <CardContent>
               <SourcesManager clientId={clientId} sources={dataSources} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="dashboard" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dashboard layout</CardTitle>
+              <CardDescription>
+                Control what the client sees and in what order. Use{" "}
+                <Link
+                  href={`/admin/clients/${clientId}/preview`}
+                  className="underline"
+                >
+                  View as client
+                </Link>{" "}
+                to preview.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DashboardEditor
+                clientId={clientId}
+                initialSections={initialSections}
+                initialDefaultRange={dashCfg?.default_date_range ?? "last_28_days"}
+                initialNotes={dashCfg?.notes ?? ""}
+                initialMetaAction={initialMetaAction}
+              />
             </CardContent>
           </Card>
         </TabsContent>
