@@ -89,7 +89,9 @@ export function buildGoogleAuthUrl(redirectUri: string, state: string): string {
     response_type: "code",
     scope: GOOGLE_SCOPES.join(" "),
     access_type: "offline",
-    prompt: "consent",
+    // select_account forces the account chooser (so admins connect the right
+    // agency Google account); consent guarantees a refresh token every time.
+    prompt: "select_account consent",
     include_granted_scopes: "true",
     state,
   });
