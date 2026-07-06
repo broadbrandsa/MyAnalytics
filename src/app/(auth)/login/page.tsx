@@ -33,7 +33,7 @@ export default function LoginPage({
         </CardHeader>
         <CardContent>
           <form action={formAction} className="flex flex-col gap-4">
-            <input type="hidden" name="next" value={next ?? "/"} />
+            <input type="hidden" name="next" value={next ?? "/admin"} />
             <div className="flex flex-col gap-2">
               <Label htmlFor="email">Email</Label>
               <Input

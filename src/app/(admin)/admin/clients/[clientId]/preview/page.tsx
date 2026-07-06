@@ -33,6 +33,7 @@ export default async function ClientPreviewPage({
         <Button
           variant="ghost"
           size="sm"
+          nativeButton={false}
           render={<Link href={`/admin/clients/${clientId}`} />}
         >
           <ArrowLeft className="size-4" />

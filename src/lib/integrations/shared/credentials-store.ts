@@ -34,11 +34,23 @@ export async function upsertProviderCredential(opts: {
   const nowIso = new Date().toISOString();
 
   if (existing) {
-    await updateSecret(existing.vault_secret_id, opts.secret);
+    // Rotate the secret in place; if the Vault ref is missing/invalid (e.g. a
+    // seeded placeholder), mint a fresh secret and repoint the row to it.
+    let vaultSecretId = existing.vault_secret_id;
+    try {
+      await updateSecret(vaultSecretId, opts.secret);
+    } catch {
+      vaultSecretId = await createSecret(
+        opts.secret,
+        `${opts.provider}-credential`,
+        opts.label,
+      );
+    }
     const { error } = await svc
       .from("oauth_credentials")
       .update({
         label: opts.label,
+        vault_secret_id: vaultSecretId,
         scopes: opts.scopes ?? [],
         status: "active",
         expires_at: opts.expiresAt ?? null,

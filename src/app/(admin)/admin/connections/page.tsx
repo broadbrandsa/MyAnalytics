@@ -95,6 +95,7 @@ export default async function ConnectionsPage() {
                   <Button
                     size="sm"
                     variant="outline"
+                    nativeButton={false}
                     render={<a href="/api/oauth/google/start" />}
                   >
                     Reconnect
@@ -105,7 +106,11 @@ export default async function ConnectionsPage() {
             ) : (
               <>
                 <p className="text-muted-foreground text-sm">Not connected.</p>
-                <Button size="sm" render={<a href="/api/oauth/google/start" />}>
+                <Button
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href="/api/oauth/google/start" />}
+                >
                   Connect Google
                 </Button>
               </>

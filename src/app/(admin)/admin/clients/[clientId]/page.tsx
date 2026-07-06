@@ -58,6 +58,7 @@ export default async function ClientDetailPage({
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
             render={<Link href={`/admin/clients/${clientId}/preview`} />}
           >
             <Eye className="size-4" />
