@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Eye } from "lucide-react";
-import { getClient, getClientMembers } from "@/lib/data/clients";
+import { getClient } from "@/lib/data/clients";
 import { listDataSources } from "@/lib/data/sources";
 import { SourcesManager } from "@/components/admin/sources-manager";
 import { updateClientOrg } from "@/lib/actions/clients";
 import { ClientForm } from "@/components/admin/client-form";
 import { ArchiveClientButton } from "@/components/admin/archive-client-button";
-import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
-import { MemberRowActions } from "@/components/admin/member-row-actions";
+import { AccessCodeCard } from "@/components/admin/access-code-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,14 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 export default async function ClientDetailPage({
   params,
@@ -37,10 +28,7 @@ export default async function ClientDetailPage({
   const client = await getClient(clientId);
   if (!client) notFound();
 
-  const members = await getClientMembers(clientId);
   const dataSources = await listDataSources(clientId);
-  const roleLabel = (r: string) =>
-    r === "super_admin" ? "Super admin" : r === "admin" ? "Admin" : "Viewer";
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,14 +70,16 @@ export default async function ClientDetailPage({
         </div>
       </div>
 
-      <Tabs defaultValue="branding">
+      <Tabs defaultValue="access">
         <TabsList>
+          <TabsTrigger value="access">Access</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
-          <TabsTrigger value="users">
-            Users {members.length > 0 && `(${members.length})`}
-          </TabsTrigger>
           <TabsTrigger value="sources">Data sources</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="access" className="mt-4">
+          <AccessCodeCard clientId={clientId} code={client.access_code} />
+        </TabsContent>
 
         <TabsContent value="branding" className="mt-4">
           <Card>
@@ -102,57 +92,6 @@ export default async function ClientDetailPage({
                 defaults={client}
                 submitLabel="Save changes"
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-4">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Users</CardTitle>
-              <InviteUserDialog clientId={clientId} />
-            </CardHeader>
-            <CardContent className="p-0">
-              {members.length === 0 ? (
-                <p className="text-muted-foreground p-6 text-sm">
-                  No users yet. Invite a viewer to give this client access.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {members.map((m) => (
-                      <TableRow key={m.userId}>
-                        <TableCell className="font-medium">
-                          {m.fullName ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {m.email ?? "—"}
-                        </TableCell>
-                        <TableCell>{roleLabel(m.role)}</TableCell>
-                        <TableCell>
-                          {m.active ? (
-                            <Badge variant="secondary">Active</Badge>
-                          ) : (
-                            <Badge variant="outline">Deactivated</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <MemberRowActions member={m} clientId={clientId} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

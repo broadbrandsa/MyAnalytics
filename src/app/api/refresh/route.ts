@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAccessClientId } from "@/lib/access/cookie";
 import { mapWithConcurrency, callSyncWorker } from "@/lib/sync/dispatch";
 import { REFRESH_RATE_LIMIT_MINUTES } from "@/lib/constants";
 
@@ -9,37 +10,51 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Client Refresh button (doc 02). Authenticates the CALLER with their session
- * (getUser) and verifies access via RLS (selecting the client only succeeds for
- * a member or admin). Enforces the 10-min rate limit, then switches to the
- * service-role client for writes — client_viewers have zero write policies.
- * Fans out a 7-day sync via after() and returns immediately; the client polls
- * sync_runs (RLS read) for progress.
+ * Client Refresh button (doc 02). Authorizes the caller two ways:
+ *  1. Code access — a valid signed access cookie names the client directly.
+ *  2. Session — an admin/member selects the client (verified via RLS).
+ * Then enforces the 10-min rate limit and does all writes via service-role
+ * (client_viewers / code visitors have no write policies). Fans out a 7-day
+ * sync via after() and returns immediately; the client polls sync_runs.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  let clientId = await getAccessClientId();
+
+  // Session fallback (admin preview / invited login).
+  if (!clientId) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const body = (await request.json().catch(() => ({}))) as {
+      clientId?: string;
+    };
+    if (!body.clientId) {
+      return NextResponse.json({ error: "clientId required" }, { status: 400 });
+    }
+    // RLS returns the row only for a member/admin.
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", body.clientId)
+      .maybeSingle();
+    if (!client) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    clientId = client.id;
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    clientId?: string;
-  };
-  if (!body.clientId) {
-    return NextResponse.json({ error: "clientId required" }, { status: 400 });
-  }
-
-  // RLS: this select returns the row only if the user is a member or admin.
-  const { data: client } = await supabase
+  const svc = createServiceClient();
+  const { data: client } = await svc
     .from("clients")
-    .select("id, last_refresh_at")
-    .eq("id", body.clientId)
+    .select("id, last_refresh_at, is_archived")
+    .eq("id", clientId)
     .maybeSingle();
-  if (!client) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!client || client.is_archived) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
   // Rate limit.
@@ -55,8 +70,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Writes via service role (client_viewers have no write policies).
-  const svc = createServiceClient();
   await svc
     .from("clients")
     .update({ last_refresh_at: new Date().toISOString() })
@@ -68,7 +81,6 @@ export async function POST(request: NextRequest) {
     .eq("client_id", client.id)
     .eq("is_active", true);
 
-  // Fan out after responding so the button returns instantly.
   after(async () => {
     await mapWithConcurrency(sources ?? [], 5, (s) =>
       callSyncWorker(s.id, "refresh"),

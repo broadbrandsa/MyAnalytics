@@ -1,36 +1,30 @@
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getAccessClientId } from "@/lib/access/cookie";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ClientDashboard } from "@/components/dashboard/client-dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ClientRow } from "@/lib/data/clients";
 
 /**
- * Viewer dashboard. Resolves the viewer's client via membership (RLS scopes
- * the read to their own client rows). If a viewer belongs to more than one
- * client, the first is shown — a switcher can come later.
+ * Code-gated client dashboard. Resolves the client from the signed access
+ * cookie and reads ONLY that client's cached data via the service-role client,
+ * explicitly filtered by client_id (there is no Supabase session/RLS here).
+ *
+ * A stale cookie (client archived/deleted) just bounces to "/", which renders
+ * the code-entry form — the cookie can't be mutated during RSC render, so it's
+ * cleared on the next successful entry or via /access/exit.
  */
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
+  const clientId = await getAccessClientId();
+  if (!clientId) redirect("/");
+
+  const svc = createServiceClient();
+  const { data: client } = await svc
     .from("clients")
     .select("*")
-    .eq("is_archived", false)
-    .order("name");
+    .eq("id", clientId)
+    .maybeSingle();
 
-  const client = (data as ClientRow[] | null)?.[0];
+  if (!client || client.is_archived) redirect("/");
 
-  if (!client) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No dashboard assigned</CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground text-sm">
-          Your account isn&apos;t linked to a client yet. Please contact your
-          Broadbrand account manager.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return <ClientDashboard client={client} />;
+  return <ClientDashboard client={client as ClientRow} />;
 }

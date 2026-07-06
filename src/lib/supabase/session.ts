@@ -44,6 +44,10 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isPublic =
+    pathname === "/" || // client code-entry landing
+    pathname.startsWith("/dashboard") || // code-gated in the (client) layout
+    pathname.startsWith("/access") || // code entry/exit
+    pathname.startsWith("/api/refresh") || // authorized by access cookie or session
     pathname.startsWith("/login") ||
     pathname.startsWith("/invite") ||
     pathname.startsWith("/auth") ||
@@ -67,10 +71,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated users on the login page → send to the app root.
+  // Authenticated admins on the login page → the admin portal.
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
 

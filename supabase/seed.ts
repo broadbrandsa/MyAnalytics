@@ -89,6 +89,7 @@ async function main() {
         brand_color: "#4f46e5",
         timezone: "Africa/Johannesburg",
         currency: "ZAR",
+        access_code: "1234",
       },
       { onConflict: "slug" },
     )
@@ -113,10 +114,12 @@ async function main() {
     .upsert({ client_id: client.id }, { onConflict: "client_id" });
   if (cfgErr) throw cfgErr;
 
-  console.log("\nDone. Sign in at http://localhost:3000/login");
-  console.log(`  Admin:  ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
-  console.log(`  Viewer: ${VIEWER_EMAIL} / ${VIEWER_PASSWORD}`);
+  console.log("\nDone.");
+  console.log("  Client dashboard: http://localhost:3000  → code 1234");
+  console.log(`  Admin login: http://localhost:3000/login → ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   void adminId;
+  void VIEWER_EMAIL;
+  void VIEWER_PASSWORD;
 }
 
 main().catch((err) => {

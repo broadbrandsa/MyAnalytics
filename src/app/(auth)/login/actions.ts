@@ -13,7 +13,8 @@ export async function login(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/") || "/";
+  // Admin login → admin portal by default (client access is via code, not login).
+  const next = String(formData.get("next") ?? "/admin") || "/admin";
 
   if (!email || !password) {
     return { error: "Email and password are required." };

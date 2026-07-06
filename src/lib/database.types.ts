@@ -34,8 +34,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_attempts: {
+        Row: {
+          count: number
+          ip: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          ip: string
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          ip?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
+          access_code: string | null
           brand_color: string | null
           created_at: string
           currency: string
@@ -48,6 +70,7 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          access_code?: string | null
           brand_color?: string | null
           created_at?: string
           currency?: string
@@ -60,6 +83,7 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          access_code?: string | null
           brand_color?: string | null
           created_at?: string
           currency?: string
