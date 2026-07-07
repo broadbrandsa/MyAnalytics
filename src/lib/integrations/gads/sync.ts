@@ -11,10 +11,14 @@ import type { SyncContext, SyncResult } from "@/lib/sync/types";
 export async function syncGoogleAds(ctx: SyncContext): Promise<SyncResult> {
   const { dataSource, window, token, svc } = ctx;
 
+  const loginCustomerId = (
+    dataSource.config as { login_customer_id?: string } | null
+  )?.login_customer_id;
   const json = await fetchGadsCampaignReport(
     token,
     dataSource.external_id,
     window,
+    loginCustomerId,
   );
   const rows = normalizeGadsCampaigns(json).map((r) => ({
     data_source_id: dataSource.id,

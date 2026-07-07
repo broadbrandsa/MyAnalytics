@@ -26,6 +26,7 @@ export interface SourceOption {
   sublabel?: string;
   currency?: string | null;
   timezone?: string | null;
+  loginCustomerId?: string | null; // Google Ads: manager to query under
 }
 
 export type SourceOptionsResult =
@@ -79,6 +80,7 @@ export async function fetchAvailableSources(
           sublabel: a.currencyCode ?? undefined,
           currency: a.currencyCode,
           timezone: a.timeZone,
+          loginCustomerId: a.loginCustomerId,
         }));
       }
     } else {
@@ -113,6 +115,7 @@ interface AssignInput {
   displayName: string;
   currency?: string | null;
   timezone?: string | null;
+  loginCustomerId?: string | null;
 }
 
 /** Assign a platform account to a client (creates a data_sources row). */
@@ -133,6 +136,10 @@ export async function assignSource(input: AssignInput): Promise<ActionResult> {
   const config: Record<string, string> = {};
   if (input.currency) config.currency = input.currency;
   if (input.timezone) config.timezone = input.timezone;
+  // Google Ads: remember which manager (MCC or the account itself) to query under.
+  if (input.source === "google_ads" && input.loginCustomerId) {
+    config.login_customer_id = input.loginCustomerId;
+  }
 
   const supabase = await createClient();
   const { data: inserted, error } = await supabase

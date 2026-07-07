@@ -170,6 +170,7 @@ function AddSourceDialog({
         displayName: opt.label,
         currency: opt.currency ?? null,
         timezone: opt.timezone ?? null,
+        loginCustomerId: opt.loginCustomerId ?? null,
       });
       if (res.ok) {
         toast.success(res.message ?? "Assigned.");

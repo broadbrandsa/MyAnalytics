@@ -34,13 +34,19 @@ export interface GadsAccount {
   descriptiveName: string;
   currencyCode: string | null;
   timeZone: string | null;
+  /** login-customer-id to use for this account (MCC if under it, else itself). */
+  loginCustomerId: string;
 }
 
 /**
  * Pure parse+filter of a customer_client searchStream response
  * (unit-testable): drops manager accounts and non-ENABLED accounts, dedupes.
+ * `loginCustomerId` is the manager the query ran under (stamped on each row).
  */
-export function parseGadsAccounts(json: unknown): GadsAccount[] {
+export function parseGadsAccounts(
+  json: unknown,
+  loginCustomerId = "",
+): GadsAccount[] {
   const chunks = gadsSearchStreamResponseSchema.parse(json);
   const seen = new Set<string>();
   const out: GadsAccount[] = [];
@@ -57,10 +63,63 @@ export function parseGadsAccounts(json: unknown): GadsAccount[] {
         descriptiveName: cc.descriptiveName ?? cc.id,
         currencyCode: cc.currencyCode ?? null,
         timeZone: cc.timeZone ?? null,
+        loginCustomerId: loginCustomerId || cc.id,
       });
     }
   }
   return out;
+}
+
+/** GET customers:listAccessibleCustomers */
+export const gadsAccessibleSchema = z.object({
+  resourceNames: z.array(z.string()).optional(),
+});
+
+/** SELECT ... FROM customer (single account, queried about itself) */
+export const gadsCustomerResponseSchema = z.array(
+  z.object({
+    results: z
+      .array(
+        z.object({
+          customer: z.object({
+            id: z.string(),
+            descriptiveName: z.string().optional(),
+            currencyCode: z.string().optional(),
+            timeZone: z.string().optional(),
+            manager: z.boolean().optional(),
+            status: z.string().optional(),
+          }),
+        }),
+      )
+      .optional(),
+  }),
+);
+
+export interface GadsCustomerInfo {
+  id: string;
+  descriptiveName: string | null;
+  currencyCode: string | null;
+  timeZone: string | null;
+  manager: boolean;
+  status: string | null;
+}
+
+export function parseGadsCustomer(json: unknown): GadsCustomerInfo | null {
+  const chunks = gadsCustomerResponseSchema.parse(json);
+  for (const chunk of chunks) {
+    for (const row of chunk.results ?? []) {
+      const c = row.customer;
+      return {
+        id: c.id,
+        descriptiveName: c.descriptiveName ?? null,
+        currencyCode: c.currencyCode ?? null,
+        timeZone: c.timeZone ?? null,
+        manager: c.manager ?? false,
+        status: c.status ?? null,
+      };
+    }
+  }
+  return null;
 }
 
 // --- Campaign report (googleAds:searchStream) ---
